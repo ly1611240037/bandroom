@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Frontend build output
+dist/
+build/
+.vite/
+
+# Go build output
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+
+# Local data and runtime files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+uploads/
+logs/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# IDE and OS files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Test and coverage output
+coverage/
+tmp/
