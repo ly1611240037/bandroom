@@ -1,0 +1,26 @@
+:root {
+  font-family: Inter, "Microsoft YaHei", system-ui, sans-serif;
+  color: #f8fafc;
+  background: #0b1020;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+
+.shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: radial-gradient(circle at 18% 20%, #2a1746 0, transparent 38%), #0b1020;
+}
+
+.hero { width: min(760px, 100%); }
+.eyebrow { color: #fb923c; font-size: 12px; letter-spacing: .2em; font-weight: 800; }
+h1 { margin: 18px 0; font-size: clamp(36px, 7vw, 72px); line-height: 1.05; }
+.lead { color: #cbd5e1; font-size: 18px; line-height: 1.7; max-width: 620px; }
+.status-card { display: inline-flex; align-items: center; gap: 10px; margin-top: 22px; padding: 14px 18px; border: 1px solid #334155; border-radius: 14px; background: #111827aa; color: #e2e8f0; }
+.status-dot { width: 9px; height: 9px; border-radius: 50%; background: #34d399; box-shadow: 0 0 16px #34d399; }

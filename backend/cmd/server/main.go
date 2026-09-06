@@ -1,0 +1,24 @@
+package main
+
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+
+	"github.com/ly1611240037/bandroom/backend/internal/config"
+)
+
+func main() {
+	cfg := config.Load()
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok", "service": "bandroom-server"})
+	})
+
+	server := &http.Server{Addr: cfg.HTTPAddr, Handler: mux}
+	log.Printf("BandRoom backend listening on %s", cfg.HTTPAddr)
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
+}
