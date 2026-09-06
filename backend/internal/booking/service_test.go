@@ -4,6 +4,7 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/ly1611240037/bandroom/backend/internal/db"
 )
@@ -77,5 +78,46 @@ func TestBookingDurationAndFutureBookingRules(t *testing.T) {
 	}
 	if _, err := service.Create(ctx, 1, 2, "测试乐队", "13800000000", "2026-09-07T11:00:00+08:00", "2026-09-07T11:30:00+08:00", "", nil); err == nil {
 		t.Fatal("customer should have only one future booking")
+	}
+}
+
+func TestCancellationRestoresCountAndCompletesBookings(t *testing.T) {
+	service := bookingService(t)
+	ctx := context.Background()
+	if _, err := service.db.Exec(`INSERT INTO membership_plans(plan_type, name, price_cents, included_uses) VALUES ('count', '次数卡', 1, 2)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.db.Exec(`INSERT INTO membership_cards(user_id, plan_id, starts_at, status, remaining_uses, paid_amount_cents) VALUES (1, 2, '2026-09-01T00:00:00Z', 'active', 2, 1)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.db.Exec(`UPDATE membership_cards SET status = 'disabled' WHERE id = 1`); err != nil {
+		t.Fatal(err)
+	}
+	item, err := service.Create(ctx, 1, 1, "次数乐队", "13800000000", "2026-09-08T09:00:00+08:00", "2026-09-08T09:30:00+08:00", "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var remaining int
+	if err := service.db.QueryRow(`SELECT remaining_uses FROM membership_cards WHERE id = 3`).Scan(&remaining); err != nil {
+		t.Fatal(err)
+	}
+	if remaining != 1 {
+		t.Fatalf("expected count deduction, got %d", remaining)
+	}
+	if err := service.CancelByCustomer(ctx, 1, item.ID, "临时有事"); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.db.QueryRow(`SELECT remaining_uses FROM membership_cards WHERE id = 3`).Scan(&remaining); err != nil {
+		t.Fatal(err)
+	}
+	if remaining != 2 {
+		t.Fatalf("expected count restoration, got %d", remaining)
+	}
+	if _, err := service.Create(ctx, 1, 1, "完成测试", "13800000000", "2026-09-08T10:00:00+08:00", "2026-09-08T10:30:00+08:00", "", nil); err != nil {
+		t.Fatal(err)
+	}
+	count, err := service.CompleteDue(ctx, time.Date(2026, 9, 8, 3, 0, 0, 0, time.UTC))
+	if err != nil || count != 1 {
+		t.Fatalf("expected one completed booking, count=%d err=%v", count, err)
 	}
 }

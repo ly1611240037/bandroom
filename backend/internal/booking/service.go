@@ -115,7 +115,7 @@ func (s *Service) Create(ctx context.Context, userID int64, roomID int64, bandNa
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
 	var future int
-	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM bookings WHERE user_id = ? AND status = 'confirmed' AND starts_at > ?`, userID, now).Scan(&future); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM bookings WHERE user_id = ? AND status = 'confirmed' AND datetime(starts_at) > datetime(?)`, userID, now).Scan(&future); err != nil {
 		return Booking{}, err
 	}
 	if future > 0 {
@@ -202,6 +202,87 @@ func (s *Service) Get(ctx context.Context, id int64) (Booking, error) {
 	return item, rows.Err()
 }
 
+func (s *Service) CancelByCustomer(ctx context.Context, userID, bookingID int64, reason string) error {
+	return s.cancel(ctx, bookingID, userID, false, reason)
+}
+func (s *Service) CancelByOwner(ctx context.Context, actorID, bookingID int64, reason string) error {
+	return s.cancel(ctx, bookingID, actorID, true, reason)
+}
+func (s *Service) cancel(ctx context.Context, bookingID, userID int64, owner bool, reason string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var bookingUser, cardID int64
+	var status, planType, bandName string
+	if err := tx.QueryRowContext(ctx, `SELECT b.user_id, b.membership_card_id, b.status, b.band_name, p.plan_type FROM bookings b JOIN membership_cards c ON c.id = b.membership_card_id JOIN membership_plans p ON p.id = c.plan_id WHERE b.id = ?`, bookingID).Scan(&bookingUser, &cardID, &status, &bandName, &planType); err != nil {
+		return err
+	}
+	if !owner && bookingUser != userID {
+		return errors.New("不能操作其他顾客的预约")
+	}
+	if status != "confirmed" {
+		return errors.New("当前预约不能取消")
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE bookings SET status = 'cancelled', cancellation_reason = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'confirmed'`, strings.TrimSpace(reason), bookingID); err != nil {
+		return err
+	}
+	if planType == "count" {
+		if _, err := tx.ExecContext(ctx, `UPDATE membership_cards SET remaining_uses = remaining_uses + 1, status = 'active' WHERE id = ?`, cardID); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO notifications(user_id, notification_type, title, body, email_status) VALUES (?, 'booking_cancelled', '预约已取消', ?, 'not_required')`, bookingUser, fmt.Sprintf("%s 的预约已取消。原因：%s", bandName, strings.TrimSpace(reason))); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO audit_logs(actor_user_id, action, target_type, target_id, after_json) VALUES (?, 'cancel_booking', 'booking', ?, ?)`, userID, bookingID, fmt.Sprintf(`{"reason":%q}`, strings.TrimSpace(reason))); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+func (s *Service) CompleteDue(ctx context.Context, at time.Time) (int64, error) {
+	result, err := s.db.ExecContext(ctx, `UPDATE bookings SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE status = 'confirmed' AND datetime(occupied_until) <= datetime(?)`, at.UTC().Format(time.RFC3339))
+	if err != nil {
+		return 0, err
+	}
+	count, _ := result.RowsAffected()
+	return count, nil
+}
+func (s *Service) MarkNoShow(ctx context.Context, actorID, bookingID int64) error {
+	result, err := s.db.ExecContext(ctx, `UPDATE bookings SET status = 'no_show', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'confirmed'`, bookingID)
+	if err != nil {
+		return err
+	}
+	count, _ := result.RowsAffected()
+	if count != 1 {
+		return errors.New("当前预约不能标记为未到场")
+	}
+	if _, err := s.db.ExecContext(ctx, `INSERT INTO audit_logs(actor_user_id, action, target_type, target_id) VALUES (?, 'mark_no_show', 'booking', ?)`, actorID, bookingID); err != nil {
+		return err
+	}
+	return nil
+}
+func (s *Service) OwnerEdit(ctx context.Context, actorID, bookingID int64, startsAt, endsAt, notes string) error {
+	start, end, err := s.validateInterval(startsAt, endsAt)
+	if err != nil {
+		return err
+	}
+	occupied := timeutil.OccupiedEnd(end)
+	result, err := s.db.ExecContext(ctx, `UPDATE bookings SET starts_at = ?, ends_at = ?, occupied_until = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'confirmed'`, start.Format(time.RFC3339), end.Format(time.RFC3339), occupied.Format(time.RFC3339), strings.TrimSpace(notes), bookingID)
+	if err != nil {
+		return err
+	}
+	count, _ := result.RowsAffected()
+	if count != 1 {
+		return errors.New("当前预约不能修改")
+	}
+	if _, err := s.db.ExecContext(ctx, `INSERT INTO audit_logs(actor_user_id, action, target_type, target_id, after_json) VALUES (?, 'edit_booking', 'booking', ?, ?)`, actorID, bookingID, fmt.Sprintf(`{"startsAt":%q,"endsAt":%q}`, startsAt, endsAt)); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *Service) validateInterval(startsAt, endsAt string) (time.Time, time.Time, error) {
 	start, err := time.Parse(time.RFC3339, startsAt)
 	if err != nil {
@@ -226,7 +307,7 @@ func (s *Service) roomFree(ctx context.Context, roomID int64, start, occupied ti
 	return s.roomFreeTx(ctx, nil, roomID, start, occupied)
 }
 func (s *Service) roomFreeTx(ctx context.Context, tx *sql.Tx, roomID int64, start, occupied time.Time) (bool, error) {
-	query := `SELECT COUNT(*) FROM bookings WHERE room_id = ? AND status = 'confirmed' AND starts_at < ? AND occupied_until > ?`
+	query := `SELECT COUNT(*) FROM bookings WHERE room_id = ? AND status = 'confirmed' AND datetime(starts_at) < datetime(?) AND datetime(occupied_until) > datetime(?)`
 	var count int
 	var err error
 	args := []any{roomID, occupied.Format(time.RFC3339), start.Format(time.RFC3339)}
@@ -251,7 +332,7 @@ func (s *Service) checkEquipmentTx(ctx context.Context, tx *sql.Tx, equipment []
 			return errors.New("所选设备当前不可用")
 		}
 		var used int
-		if err := tx.QueryRowContext(ctx, `SELECT COALESCE(SUM(be.quantity), 0) FROM booking_equipment be JOIN bookings b ON b.id = be.booking_id WHERE be.equipment_id = ? AND b.status = 'confirmed' AND b.starts_at < ? AND b.occupied_until > ?`, item.EquipmentID, occupied.Format(time.RFC3339), start.Format(time.RFC3339)).Scan(&used); err != nil {
+		if err := tx.QueryRowContext(ctx, `SELECT COALESCE(SUM(be.quantity), 0) FROM booking_equipment be JOIN bookings b ON b.id = be.booking_id WHERE be.equipment_id = ? AND b.status = 'confirmed' AND datetime(b.starts_at) < datetime(?) AND datetime(b.occupied_until) > datetime(?)`, item.EquipmentID, occupied.Format(time.RFC3339), start.Format(time.RFC3339)).Scan(&used); err != nil {
 			return err
 		}
 		if used+item.Quantity > total {
@@ -265,7 +346,7 @@ func (s *Service) consumeMembershipTx(ctx context.Context, tx *sql.Tx, userID in
 	var id int64
 	var planType string
 	var remaining sql.NullInt64
-	err := tx.QueryRowContext(ctx, `SELECT c.id, p.plan_type, c.remaining_uses FROM membership_cards c JOIN membership_plans p ON p.id = c.plan_id WHERE c.user_id = ? AND c.status IN ('active', 'scheduled') AND c.starts_at <= ? AND (p.plan_type = 'monthly' AND (c.ends_at IS NULL OR c.ends_at > ?) OR p.plan_type = 'count' AND c.remaining_uses > 0) ORDER BY CASE WHEN p.plan_type = 'monthly' THEN 0 ELSE 1 END, c.starts_at LIMIT 1`, userID, now, now).Scan(&id, &planType, &remaining)
+	err := tx.QueryRowContext(ctx, `SELECT c.id, p.plan_type, c.remaining_uses FROM membership_cards c JOIN membership_plans p ON p.id = c.plan_id WHERE c.user_id = ? AND c.status IN ('active', 'scheduled') AND datetime(c.starts_at) <= datetime(?) AND (p.plan_type = 'monthly' AND (c.ends_at IS NULL OR datetime(c.ends_at) > datetime(?)) OR p.plan_type = 'count' AND c.remaining_uses > 0) ORDER BY CASE WHEN p.plan_type = 'monthly' THEN 0 ELSE 1 END, c.starts_at LIMIT 1`, userID, now, now).Scan(&id, &planType, &remaining)
 	if err != nil {
 		return 0, ErrNoMembership
 	}
