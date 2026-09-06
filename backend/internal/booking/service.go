@@ -191,6 +191,27 @@ func (s *Service) ListByUser(ctx context.Context, userID int64) ([]Booking, erro
 	}
 	return result, rows.Err()
 }
+
+func (s *Service) ListAll(ctx context.Context) ([]Booking, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id FROM bookings ORDER BY starts_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	result := make([]Booking, 0)
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		item, err := s.Get(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, item)
+	}
+	return result, rows.Err()
+}
 func (s *Service) Get(ctx context.Context, id int64) (Booking, error) {
 	var item Booking
 	if err := s.db.QueryRowContext(ctx, `SELECT id, user_id, room_id, membership_card_id, band_name, phone, starts_at, ends_at, occupied_until, status, notes FROM bookings WHERE id = ?`, id).Scan(&item.ID, &item.UserID, &item.RoomID, &item.MembershipCardID, &item.BandName, &item.Phone, &item.StartsAt, &item.EndsAt, &item.OccupiedUntil, &item.Status, &item.Notes); err != nil {

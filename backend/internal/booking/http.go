@@ -21,6 +21,7 @@ func (h Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/availability", h.availability)
 	mux.Handle("POST /api/customer/bookings", h.auth.RequireVerifiedCustomer(http.HandlerFunc(h.create)))
 	mux.Handle("GET /api/customer/bookings", h.auth.RequireRole("customer", http.HandlerFunc(h.list)))
+	mux.Handle("GET /api/owner/bookings", h.auth.RequireRole("owner", http.HandlerFunc(h.listAll)))
 	mux.Handle("POST /api/customer/bookings/{id}/cancel", h.auth.RequireRole("customer", http.HandlerFunc(h.cancelCustomer)))
 	mux.Handle("POST /api/owner/bookings/{id}/cancel", h.auth.RequireRole("owner", http.HandlerFunc(h.cancelOwner)))
 	mux.Handle("POST /api/owner/bookings/{id}/no-show", h.auth.RequireRole("owner", http.HandlerFunc(h.noShow)))
@@ -77,6 +78,14 @@ func (h Handler) list(w http.ResponseWriter, r *http.Request) {
 	items, err := h.service.ListByUser(r.Context(), user.ID)
 	if err != nil {
 		httpx.WriteError(w, 500, "读取预约失败")
+		return
+	}
+	writeJSON(w, 200, map[string]any{"bookings": items})
+}
+func (h Handler) listAll(w http.ResponseWriter, r *http.Request) {
+	items, err := h.service.ListAll(r.Context())
+	if err != nil {
+		httpx.WriteError(w, 500, "读取全部预约失败")
 		return
 	}
 	writeJSON(w, 200, map[string]any{"bookings": items})
