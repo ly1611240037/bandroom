@@ -62,7 +62,7 @@
 
 ## 10. Integration, packaging, and project materials
 
-- [ ]  10.1 Add end-to-end tests for registration, card activation, valid booking, room conflict, equipment conflict, cancellation, count restoration, automatic completion, and owner management; verify the full test suite passes on a fresh SQLite database.
-- [ ]  10.2 Build the React production bundle and serve it from Go alongside the API; verify the complete demo works from one local URL without a separate frontend server.
-- [ ]  10.3 Add startup instructions, demo credentials, test-mail instructions, backup/restore guidance, and sample demonstration scenarios; verify another person can run the project from the documentation.
+- [x]  10.1 Add end-to-end tests for registration, card activation, valid booking, room conflict, equipment conflict, cancellation, count restoration, automatic completion, and owner management; verify the full test suite passes on a fresh SQLite database.
+- [x]  10.2 Build the React production bundle and serve it from Go alongside the API; verify the complete demo works from one local URL without a separate frontend server.
+- [x]  10.3 Add startup instructions, demo credentials, test-mail instructions, backup/restore guidance, and sample demonstration scenarios; verify another person can run the project from the documentation.
 - [ ]  10.4 Prepare project overview, architecture diagram, database description, user manual, screenshots, test report, and feature demonstration script; verify the materials match the implemented v1 behavior.

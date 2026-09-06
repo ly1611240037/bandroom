@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ly1611240037/bandroom/backend/internal/admin"
@@ -46,11 +49,33 @@ func main() {
 	admin.NewHandler(admin.NewService(database), authHandler).RegisterRoutes(mux)
 	go runBackgroundTasks(database, bookingService, notificationService)
 
-	server := &http.Server{Addr: cfg.HTTPAddr, Handler: cors(cfg.AppURL, mux)}
+	server := &http.Server{Addr: cfg.HTTPAddr, Handler: cors(cfg.AppURL, frontendHandler(cfg.FrontendDist, mux))}
 	log.Printf("BandRoom backend listening on %s", cfg.HTTPAddr)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
+}
+
+func frontendHandler(dist string, api http.Handler) http.Handler {
+	files := http.FileServer(http.Dir(dist))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			api.ServeHTTP(w, r)
+			return
+		}
+		clean := filepath.Clean(strings.TrimPrefix(r.URL.Path, "/"))
+		filePath := filepath.Join(dist, clean)
+		if r.URL.Path == "/" || clean == "." || !fileExists(filePath) {
+			http.ServeFile(w, r, filepath.Join(dist, "index.html"))
+			return
+		}
+		files.ServeHTTP(w, r)
+	})
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
 }
 
 func runBackgroundTasks(database *sql.DB, bookings *booking.Service, notifications *notification.Service) {
