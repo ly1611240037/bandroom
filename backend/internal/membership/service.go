@@ -34,6 +34,14 @@ type Card struct {
 	PaymentMethod   string `json:"paymentMethod"`
 	Notes           string `json:"notes"`
 }
+type CustomerSummary struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	Phone     string `json:"phone"`
+	Verified  bool   `json:"verified"`
+	CardCount int    `json:"cardCount"`
+}
 
 type Service struct{ db *sql.DB }
 
@@ -226,6 +234,26 @@ func (s *Service) ListCards(ctx context.Context, userID int64) ([]Card, error) {
 		cards = append(cards, card)
 	}
 	return cards, rows.Err()
+}
+
+func (s *Service) ListCustomers(ctx context.Context, keyword string) ([]CustomerSummary, error) {
+	like := "%" + keyword + "%"
+	rows, err := s.db.QueryContext(ctx, `SELECT u.id, u.name, u.email, u.phone, u.email_verified_at, COUNT(c.id) FROM users u LEFT JOIN membership_cards c ON c.user_id = u.id WHERE u.role = 'customer' AND (? = '' OR u.name LIKE ? OR u.email LIKE ? OR u.phone LIKE ?) GROUP BY u.id ORDER BY u.id`, keyword, like, like, like)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	result := make([]CustomerSummary, 0)
+	for rows.Next() {
+		var item CustomerSummary
+		var verified sql.NullString
+		if err := rows.Scan(&item.ID, &item.Name, &item.Email, &item.Phone, &verified, &item.CardCount); err != nil {
+			return nil, err
+		}
+		item.Verified = verified.Valid
+		result = append(result, item)
+	}
+	return result, rows.Err()
 }
 
 func (s *Service) Eligibility(ctx context.Context, userID int64, at time.Time) (Card, error) {

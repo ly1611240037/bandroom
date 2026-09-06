@@ -51,8 +51,8 @@
 
 - [x]  8.1 Build the owner dashboard and date-based all-room booking calendar; verify booking details show customer, room, time, equipment, membership usage, notes, and status.
 - [x]  8.2 Build owner pages for rooms, fixed equipment, public equipment, schedules, closures, issue reports, memberships, notifications, and venue content; verify each page supports the documented operations.
-- [ ]  8.3 Add booking/member search and filters plus CSV exports; verify filtered exports contain the expected records and UTF-8 Chinese text.
-- [ ]  8.4 Add dashboard statistics and audit-log viewing; verify statistics reflect booking, membership, equipment, cancellation, and no-show data.
+- [x]  8.3 Add booking/member search and filters plus CSV exports; verify filtered exports contain the expected records and UTF-8 Chinese text.
+- [x]  8.4 Add dashboard statistics and audit-log viewing; verify statistics reflect booking, membership, equipment, cancellation, and no-show data.
 
 ## 9. Venue website and content
 

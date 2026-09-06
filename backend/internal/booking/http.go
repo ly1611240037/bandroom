@@ -1,9 +1,11 @@
 package booking
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/ly1611240037/bandroom/backend/internal/auth"
 	"github.com/ly1611240037/bandroom/backend/internal/httpx"
@@ -22,6 +24,7 @@ func (h Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.Handle("POST /api/customer/bookings", h.auth.RequireVerifiedCustomer(http.HandlerFunc(h.create)))
 	mux.Handle("GET /api/customer/bookings", h.auth.RequireRole("customer", http.HandlerFunc(h.list)))
 	mux.Handle("GET /api/owner/bookings", h.auth.RequireRole("owner", http.HandlerFunc(h.listAll)))
+	mux.Handle("GET /api/owner/bookings.csv", h.auth.RequireRole("owner", http.HandlerFunc(h.exportCSV)))
 	mux.Handle("POST /api/customer/bookings/{id}/cancel", h.auth.RequireRole("customer", http.HandlerFunc(h.cancelCustomer)))
 	mux.Handle("POST /api/owner/bookings/{id}/cancel", h.auth.RequireRole("owner", http.HandlerFunc(h.cancelOwner)))
 	mux.Handle("POST /api/owner/bookings/{id}/no-show", h.auth.RequireRole("owner", http.HandlerFunc(h.noShow)))
@@ -83,12 +86,27 @@ func (h Handler) list(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"bookings": items})
 }
 func (h Handler) listAll(w http.ResponseWriter, r *http.Request) {
-	items, err := h.service.ListAll(r.Context())
+	items, err := h.service.Search(r.Context(), r.URL.Query().Get("date"), r.URL.Query().Get("status"), r.URL.Query().Get("q"))
 	if err != nil {
 		httpx.WriteError(w, 500, "读取全部预约失败")
 		return
 	}
 	writeJSON(w, 200, map[string]any{"bookings": items})
+}
+func (h Handler) exportCSV(w http.ResponseWriter, r *http.Request) {
+	items, err := h.service.Search(r.Context(), r.URL.Query().Get("date"), r.URL.Query().Get("status"), r.URL.Query().Get("q"))
+	if err != nil {
+		httpx.WriteError(w, 500, "导出预约失败")
+		return
+	}
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", `attachment; filename="bandroom-bookings.csv"`)
+	writer := csv.NewWriter(w)
+	_ = writer.Write([]string{"编号", "顾客ID", "房间ID", "乐队", "手机号", "开始时间", "结束时间", "状态", "会员卡ID", "备注"})
+	for _, item := range items {
+		_ = writer.Write([]string{strconv.FormatInt(item.ID, 10), strconv.FormatInt(item.UserID, 10), strconv.FormatInt(item.RoomID, 10), item.BandName, item.Phone, item.StartsAt, item.EndsAt, item.Status, strconv.FormatInt(item.MembershipCardID, 10), item.Notes})
+	}
+	writer.Flush()
 }
 func (h Handler) cancelCustomer(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())

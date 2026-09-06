@@ -1,9 +1,11 @@
 package membership
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/ly1611240037/bandroom/backend/internal/auth"
@@ -26,6 +28,31 @@ func (h Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.Handle("PATCH /api/owner/membership/plans/{id}", h.auth.RequireRole("owner", http.HandlerFunc(h.updatePlan)))
 	mux.Handle("PATCH /api/owner/membership/plans/{id}/status", h.auth.RequireRole("owner", http.HandlerFunc(h.setPlanStatus)))
 	mux.Handle("POST /api/owner/membership/cards", h.auth.RequireRole("owner", http.HandlerFunc(h.activateCard)))
+	mux.Handle("GET /api/owner/customers", h.auth.RequireRole("owner", http.HandlerFunc(h.listCustomers)))
+	mux.Handle("GET /api/owner/customers.csv", h.auth.RequireRole("owner", http.HandlerFunc(h.exportCustomers)))
+}
+func (h Handler) listCustomers(w http.ResponseWriter, r *http.Request) {
+	customers, err := h.service.ListCustomers(r.Context(), r.URL.Query().Get("q"))
+	if err != nil {
+		httpx.WriteError(w, 500, "读取顾客失败")
+		return
+	}
+	writeJSON(w, 200, map[string]any{"customers": customers})
+}
+func (h Handler) exportCustomers(w http.ResponseWriter, r *http.Request) {
+	customers, err := h.service.ListCustomers(r.Context(), r.URL.Query().Get("q"))
+	if err != nil {
+		httpx.WriteError(w, 500, "导出顾客失败")
+		return
+	}
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", `attachment; filename="bandroom-customers.csv"`)
+	writer := csv.NewWriter(w)
+	_ = writer.Write([]string{"编号", "姓名", "邮箱", "手机号", "邮箱已验证", "会员卡数量"})
+	for _, item := range customers {
+		_ = writer.Write([]string{strconv.FormatInt(item.ID, 10), item.Name, item.Email, item.Phone, strconv.FormatBool(item.Verified), strconv.Itoa(item.CardCount)})
+	}
+	writer.Flush()
 }
 
 func (h Handler) listMyCards(w http.ResponseWriter, r *http.Request) {

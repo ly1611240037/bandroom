@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ly1611240037/bandroom/backend/internal/admin"
 	"github.com/ly1611240037/bandroom/backend/internal/auth"
 	"github.com/ly1611240037/bandroom/backend/internal/booking"
 	"github.com/ly1611240037/bandroom/backend/internal/config"
@@ -42,6 +43,7 @@ func main() {
 	booking.NewHandler(bookingService, authHandler).RegisterRoutes(mux)
 	notification.NewHandler(notificationService, authHandler).RegisterRoutes(mux)
 	content.NewHandler(content.NewService(database), authHandler).RegisterRoutes(mux)
+	admin.NewHandler(admin.NewService(database), authHandler).RegisterRoutes(mux)
 	go runBackgroundTasks(database, bookingService, notificationService)
 
 	server := &http.Server{Addr: cfg.HTTPAddr, Handler: cors(cfg.AppURL, mux)}

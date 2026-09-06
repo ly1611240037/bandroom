@@ -193,7 +193,11 @@ func (s *Service) ListByUser(ctx context.Context, userID int64) ([]Booking, erro
 }
 
 func (s *Service) ListAll(ctx context.Context) ([]Booking, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id FROM bookings ORDER BY starts_at DESC`)
+	return s.Search(ctx, "", "", "")
+}
+
+func (s *Service) Search(ctx context.Context, date, status, keyword string) ([]Booking, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id FROM bookings WHERE (? = '' OR date(datetime(starts_at)) = ?) AND (? = '' OR status = ?) AND (? = '' OR band_name LIKE ? OR phone LIKE ?) ORDER BY starts_at DESC`, date, date, status, status, keyword, "%"+keyword+"%", "%"+keyword+"%")
 	if err != nil {
 		return nil, err
 	}
