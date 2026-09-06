@@ -22,7 +22,7 @@
 - [x]  4.1 Implement owner management of monthly and count-based plans, including enable/disable and offline payment records; verify plan changes appear in the owner backend.
 - [x]  4.2 Implement manual card activation, 30-day monthly validity, sequential future monthly cards, and unlimited count-card validity; verify date and remaining-count calculations.
 - [x]  4.3 Implement monthly-card priority, count deduction, cancellation restoration, and eligibility checks; verify unit and integration tests cover both card types and exhausted counts.
-- [ ]  4.4 Build owner membership pages and customer membership status pages; verify card status, expiry, remaining counts, and purchase details are visible to the correct user.
+- [x]  4.4 Build owner membership pages and customer membership status pages; verify card status, expiry, remaining counts, and purchase details are visible to the correct user.
 
 ## 5. Rooms, schedules, and equipment
 

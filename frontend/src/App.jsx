@@ -19,6 +19,7 @@ function App() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [user, setUser] = useState(null)
+  const [cards, setCards] = useState([])
   const [loading, setLoading] = useState(false)
   const params = new URLSearchParams(window.location.search)
 
@@ -35,6 +36,11 @@ function App() {
     }
     api('/api/auth/me').then((data) => setUser(data.user)).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (user?.role === 'customer') api('/api/customer/membership/cards').then((data) => setCards(data.cards || [])).catch(() => setCards([]))
+    else setCards([])
+  }, [user])
 
   function updateField(event) {
     setForm((old) => ({ ...old, [event.target.name]: event.target.value }))
@@ -63,7 +69,7 @@ function App() {
 
   async function logout() {
     await api('/api/auth/logout', { method: 'POST' }).catch(() => {})
-    setUser(null); setMessage('已退出登录')
+    setUser(null); setCards([]); setMessage('已退出登录')
   }
 
   const titles = { login: '登录 BandRoom', register: '创建顾客账号', forgot: '找回密码', reset: '设置新密码' }
@@ -80,7 +86,7 @@ function App() {
       </section>
       <section className="auth-card">
         <div className="card-top"><span className="record-dot" /><span>REHEARSAL ROOM ACCESS</span></div>
-        {user ? <LoggedIn user={user} onLogout={logout} /> : <>
+        {user ? <LoggedIn user={user} cards={cards} onLogout={logout} /> : <>
           <div className="card-heading"><p className="eyebrow">ACCOUNT</p><h2>{titles[view]}</h2><p>{view === 'register' ? '注册后即可查看空闲房间并提交预约。' : '登录后管理你的排练预约与会员权益。'}</p></div>
           {message && <div className="notice success">{message}</div>}
           {error && <div className="notice error">{error}</div>}
@@ -108,8 +114,13 @@ function AuthLinks({ view, onChange }) {
   return <div className="switch-line">{view === 'login' ? <><span>还没有账号？</span><button onClick={() => onChange('register')}>立即注册</button><button onClick={() => onChange('forgot')}>忘记密码</button></> : <button onClick={() => onChange('login')}>返回登录</button>}</div>
 }
 
-function LoggedIn({ user, onLogout }) {
-  return <div className="logged-in"><div className="avatar">{user.name.slice(0, 1)}</div><h2>你好，{user.name}</h2><p>{user.email}</p><div className="member-badge">{user.role === 'owner' ? '老板账户' : user.emailVerifiedAt ? '邮箱已验证' : '待验证'}</div><button className="secondary-button">进入预约中心</button><button className="text-button" onClick={onLogout}>退出登录</button></div>
+function LoggedIn({ user, cards, onLogout }) {
+  return <div className="logged-in"><div className="avatar">{user.name.slice(0, 1)}</div><h2>你好，{user.name}</h2><p>{user.email}</p><div className="member-badge">{user.role === 'owner' ? '老板账户' : user.emailVerifiedAt ? '邮箱已验证' : '待验证'}</div>{user.role === 'customer' && <MembershipCards cards={cards} />}<button className="secondary-button">进入预约中心</button><button className="text-button" onClick={onLogout}>退出登录</button></div>
+}
+
+function MembershipCards({ cards }) {
+  if (!cards.length) return <div className="membership-empty">暂时没有会员卡，请联系老板线下开通。</div>
+  return <div className="membership-list">{cards.map((card) => <div className="membership-card" key={card.id}><div><strong>{card.planName}</strong><span>{card.planType === 'monthly' ? '月卡' : '次数卡'}</span></div><b>{card.planType === 'monthly' ? `${card.startsAt.slice(0, 10)} — ${card.endsAt.slice(0, 10)}` : `剩余 ${card.remainingUses ?? 0} 次`}</b><small>{card.status === 'active' ? '当前可用' : card.status === 'scheduled' ? '待生效' : card.status === 'depleted' ? '已用完' : card.status}</small></div>)}</div>
 }
 
 export default App

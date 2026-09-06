@@ -20,11 +20,20 @@ func NewHandler(service *Service, authHandler auth.Handler) Handler {
 }
 
 func (h Handler) RegisterRoutes(mux *http.ServeMux) {
+	mux.Handle("GET /api/customer/membership/cards", h.auth.RequireRole("customer", http.HandlerFunc(h.listMyCards)))
 	mux.Handle("GET /api/owner/membership/plans", h.auth.RequireRole("owner", http.HandlerFunc(h.listPlans)))
 	mux.Handle("POST /api/owner/membership/plans", h.auth.RequireRole("owner", http.HandlerFunc(h.createPlan)))
 	mux.Handle("PATCH /api/owner/membership/plans/{id}", h.auth.RequireRole("owner", http.HandlerFunc(h.updatePlan)))
 	mux.Handle("PATCH /api/owner/membership/plans/{id}/status", h.auth.RequireRole("owner", http.HandlerFunc(h.setPlanStatus)))
 	mux.Handle("POST /api/owner/membership/cards", h.auth.RequireRole("owner", http.HandlerFunc(h.activateCard)))
+}
+
+func (h Handler) listMyCards(w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok { httpx.WriteError(w, http.StatusUnauthorized, "请先登录"); return }
+	cards, err := h.service.ListCards(r.Context(), user.ID)
+	if err != nil { httpx.WriteError(w, http.StatusInternalServerError, "读取会员卡失败"); return }
+	writeJSON(w, http.StatusOK, map[string]any{"cards": cards})
 }
 
 func (h Handler) listPlans(w http.ResponseWriter, r *http.Request) {
