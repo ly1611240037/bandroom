@@ -34,9 +34,9 @@
 
 ## 6. Booking engine
 
-- [ ]  6.1 Implement availability calculation from opening hours, closures, room status, existing bookings, and 30-minute cleaning buffers; verify 0.5–3 hour selections and boundary times.
-- [ ]  6.2 Implement transactional booking creation with membership, one-future-booking, monthly-expiry, room-conflict, and equipment-inventory checks; verify conflicting concurrent requests cannot overbook resources.
-- [ ]  6.3 Implement booking records with customer, band name, contact details, room, interval, equipment quantities, notes, membership usage, and status; verify successful booking data is complete.
+- [x]  6.1 Implement availability calculation from opening hours, closures, room status, existing bookings, and 30-minute cleaning buffers; verify 0.5–3 hour selections and boundary times.
+- [x]  6.2 Implement transactional booking creation with membership, one-future-booking, monthly-expiry, room-conflict, and equipment-inventory checks; verify conflicting concurrent requests cannot overbook resources.
+- [x]  6.3 Implement booking records with customer, band name, contact details, room, interval, equipment quantities, notes, membership usage, and status; verify successful booking data is complete.
 - [ ]  6.4 Implement customer booking list/detail pages and date-first booking flow; verify a customer can browse a date, choose an available room and slot, select equipment, and book immediately.
 - [ ]  6.5 Implement cancellation, immediate resource release, count restoration, cancellation notifications, and the 24-hour booking rule; verify cancellation and rebooking behavior.
 - [ ]  6.6 Implement automatic completion after end time plus cleaning buffer, owner no-show marking, and owner edit/cancel/exception handling without adding owner-created bookings in v1; verify lifecycle transitions and audit entries.
