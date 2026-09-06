@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ly1611240037/bandroom/backend/internal/auth"
 	"github.com/ly1611240037/bandroom/backend/internal/db"
 )
 
@@ -20,8 +21,14 @@ func TestSeedDemoIsRepeatable(t *testing.T) {
 	if err := SeedDemo(context.Background(), database); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := database.Exec(`UPDATE users SET password_hash = 'old-password' WHERE email = 'owner@bandroom.test'`); err != nil {
+		t.Fatal(err)
+	}
 	if err := SeedDemo(context.Background(), database); err != nil {
 		t.Fatal(err)
+	}
+	if _, _, err := auth.NewService(database, "http://localhost:8080", nil).Login(context.Background(), "owner@bandroom.test", "demo123456"); err != nil {
+		t.Fatalf("seed should restore demo password: %v", err)
 	}
 
 	checks := []struct {

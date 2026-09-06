@@ -20,12 +20,14 @@ func SeedDemo(ctx context.Context, database *sql.DB) error {
 	}
 	defer tx.Rollback()
 
-	if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO users(role, name, email, phone, password_hash, email_verified_at)
-		VALUES ('owner', 'BandRoom 老板', 'owner@bandroom.test', '13800000000', ?, CURRENT_TIMESTAMP)`, demoPasswordHash); err != nil {
+	if _, err := tx.ExecContext(ctx, `INSERT INTO users(role, name, email, phone, password_hash, email_verified_at)
+		VALUES ('owner', 'BandRoom 老板', 'owner@bandroom.test', '13800000000', ?, CURRENT_TIMESTAMP)
+		ON CONFLICT(email) DO UPDATE SET role = excluded.role, name = excluded.name, phone = excluded.phone, password_hash = excluded.password_hash, email_verified_at = COALESCE(users.email_verified_at, excluded.email_verified_at)`, demoPasswordHash); err != nil {
 		return fmt.Errorf("seed owner: %w", err)
 	}
-	if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO users(role, name, email, phone, password_hash, email_verified_at)
-		VALUES ('customer', '演示联系人', 'customer@bandroom.test', '13900000000', ?, CURRENT_TIMESTAMP)`, demoPasswordHash); err != nil {
+	if _, err := tx.ExecContext(ctx, `INSERT INTO users(role, name, email, phone, password_hash, email_verified_at)
+		VALUES ('customer', '演示联系人', 'customer@bandroom.test', '13900000000', ?, CURRENT_TIMESTAMP)
+		ON CONFLICT(email) DO UPDATE SET role = excluded.role, name = excluded.name, phone = excluded.phone, password_hash = excluded.password_hash, email_verified_at = COALESCE(users.email_verified_at, excluded.email_verified_at)`, demoPasswordHash); err != nil {
 		return fmt.Errorf("seed customer: %w", err)
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO membership_plans(plan_type, name, price_cents, included_uses)
