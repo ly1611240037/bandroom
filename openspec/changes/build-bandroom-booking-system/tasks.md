@@ -15,7 +15,7 @@
 - [x]  3.1 Implement customer registration, password hashing, email verification, login, logout, and session handling; verify unverified customers cannot create bookings.
 - [x]  3.2 Implement password-reset request and one-time expiring reset links; verify a used or expired link cannot reset a password again.
 - [x]  3.3 Implement owner authentication and role checks for all backend management operations; verify a customer cannot access owner endpoints or another customer's data.
-- [ ]  3.4 Build customer account pages for profile, verification state, and password recovery; verify the complete customer auth flow in the browser.
+- [x]  3.4 Build customer account pages for profile, verification state, and password recovery; verify the complete customer auth flow in the browser.
 
 ## 4. Membership cards
 
