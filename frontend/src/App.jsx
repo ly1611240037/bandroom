@@ -20,6 +20,7 @@ function App() {
   const [error, setError] = useState('')
   const [user, setUser] = useState(null)
   const [cards, setCards] = useState([])
+  const [notifications, setNotifications] = useState([])
   const [rooms, setRooms] = useState([])
   const [equipment, setEquipment] = useState([])
   const [loading, setLoading] = useState(false)
@@ -42,6 +43,11 @@ function App() {
   useEffect(() => {
     if (user?.role === 'customer') api('/api/customer/membership/cards').then((data) => setCards(data.cards || [])).catch(() => setCards([]))
     else setCards([])
+  }, [user])
+
+  useEffect(() => {
+    if (user) api('/api/notifications').then((data) => setNotifications(data.notifications || [])).catch(() => setNotifications([]))
+    else setNotifications([])
   }, [user])
 
   useEffect(() => {
@@ -77,7 +83,7 @@ function App() {
 
   async function logout() {
     await api('/api/auth/logout', { method: 'POST' }).catch(() => {})
-    setUser(null); setCards([]); setMessage('已退出登录')
+    setUser(null); setCards([]); setNotifications([]); setMessage('已退出登录')
   }
 
   const titles = { login: '登录 BandRoom', register: '创建顾客账号', forgot: '找回密码', reset: '设置新密码' }
@@ -95,7 +101,7 @@ function App() {
       </section>
       <section className="auth-card">
         <div className="card-top"><span className="record-dot" /><span>REHEARSAL ROOM ACCESS</span></div>
-        {user ? <LoggedIn user={user} cards={cards} rooms={rooms} equipment={equipment} onLogout={logout} /> : <>
+        {user ? <LoggedIn user={user} cards={cards} notifications={notifications} setNotifications={setNotifications} rooms={rooms} equipment={equipment} onLogout={logout} /> : <>
           <div className="card-heading"><p className="eyebrow">ACCOUNT</p><h2>{titles[view]}</h2><p>{view === 'register' ? '注册后即可查看空闲房间并提交预约。' : '登录后管理你的排练预约与会员权益。'}</p></div>
           {message && <div className="notice success">{message}</div>}
           {error && <div className="notice error">{error}</div>}
@@ -123,13 +129,19 @@ function AuthLinks({ view, onChange }) {
   return <div className="switch-line">{view === 'login' ? <><span>还没有账号？</span><button onClick={() => onChange('register')}>立即注册</button><button onClick={() => onChange('forgot')}>忘记密码</button></> : <button onClick={() => onChange('login')}>返回登录</button>}</div>
 }
 
-function LoggedIn({ user, cards, rooms, equipment, onLogout }) {
-  return <div className="logged-in"><div className="avatar">{user.name.slice(0, 1)}</div><h2>你好，{user.name}</h2><p>{user.email}</p><div className="member-badge">{user.role === 'owner' ? '老板账户' : user.emailVerifiedAt ? '邮箱已验证' : '待验证'}</div>{user.role === 'customer' && <><MembershipCards cards={cards} /><BookingCenter user={user} rooms={rooms} equipment={equipment} /></>}<button className="secondary-button">进入预约中心</button><button className="text-button" onClick={onLogout}>退出登录</button></div>
+function LoggedIn({ user, cards, notifications, setNotifications, rooms, equipment, onLogout }) {
+  return <div className="logged-in"><div className="avatar">{user.name.slice(0, 1)}</div><h2>你好，{user.name}</h2><p>{user.email}</p><div className="member-badge">{user.role === 'owner' ? '老板账户' : user.emailVerifiedAt ? '邮箱已验证' : '待验证'}</div><Notifications items={notifications} setItems={setNotifications} />{user.role === 'customer' && <><MembershipCards cards={cards} /><BookingCenter user={user} rooms={rooms} equipment={equipment} /></>}<button className="secondary-button">进入预约中心</button><button className="text-button" onClick={onLogout}>退出登录</button></div>
 }
 
 function MembershipCards({ cards }) {
   if (!cards.length) return <div className="membership-empty">暂时没有会员卡，请联系老板线下开通。</div>
   return <div className="membership-list">{cards.map((card) => <div className="membership-card" key={card.id}><div><strong>{card.planName}</strong><span>{card.planType === 'monthly' ? '月卡' : '次数卡'}</span></div><b>{card.planType === 'monthly' ? `${card.startsAt.slice(0, 10)} — ${card.endsAt.slice(0, 10)}` : `剩余 ${card.remainingUses ?? 0} 次`}</b><small>{card.status === 'active' ? '当前可用' : card.status === 'scheduled' ? '待生效' : card.status === 'depleted' ? '已用完' : card.status}</small></div>)}</div>
+}
+
+function Notifications({ items, setItems }) {
+  async function markRead(id) { await api(`/api/notifications/${id}/read`, { method: 'PATCH' }).catch(() => {}); setItems((old) => old.map((item) => item.id === id ? { ...item, readAt: new Date().toISOString() } : item)) }
+  if (!items.length) return <div className="notification-empty">暂无站内通知</div>
+  return <div className="notifications"><div className="booking-heading"><span>通知</span><small>{items.filter((item) => !item.readAt).length} 条未读</small></div>{items.slice(0, 3).map((item) => <button type="button" className={item.readAt ? 'notification read' : 'notification'} key={item.id} onClick={() => markRead(item.id)}><b>{item.title}</b><span>{item.body}</span></button>)}</div>
 }
 
 function Catalog({ rooms, equipment }) {

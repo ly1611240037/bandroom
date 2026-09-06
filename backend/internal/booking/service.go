@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ly1611240037/bandroom/backend/internal/notification"
 	"github.com/ly1611240037/bandroom/backend/internal/timeutil"
 )
 
@@ -42,10 +43,15 @@ type Slot struct {
 type Service struct {
 	db       *sql.DB
 	location *time.Location
+	notifier *notification.Service
 }
 
-func NewService(database *sql.DB) *Service {
-	return &Service{db: database, location: time.FixedZone("China Standard Time", 8*60*60)}
+func NewService(database *sql.DB, notifiers ...*notification.Service) *Service {
+	var notifier *notification.Service
+	if len(notifiers) > 0 {
+		notifier = notifiers[0]
+	}
+	return &Service{db: database, location: time.FixedZone("China Standard Time", 8*60*60), notifier: notifier}
 }
 
 func (s *Service) Availability(ctx context.Context, roomID int64, date string) ([]Slot, error) {
@@ -158,6 +164,9 @@ func (s *Service) Create(ctx context.Context, userID int64, roomID int64, bandNa
 	}
 	if err := tx.Commit(); err != nil {
 		return Booking{}, err
+	}
+	if s.notifier != nil {
+		_ = s.notifier.CreateBookingNotifications(ctx, id, userID, roomID, start.Format(time.RFC3339), strings.TrimSpace(bandName))
 	}
 	return s.Get(ctx, id)
 }

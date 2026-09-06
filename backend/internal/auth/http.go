@@ -138,6 +138,17 @@ func (h Handler) RequireRole(role string, next http.Handler) http.Handler {
 	})
 }
 
+func (h Handler) RequireLogin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, err := h.currentUser(r)
+		if err != nil {
+			httpx.WriteError(w, http.StatusUnauthorized, err.Error())
+			return
+		}
+		next.ServeHTTP(w, r.WithContext(withUser(r.Context(), user)))
+	})
+}
+
 func (h Handler) RequireVerifiedCustomer(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, err := h.currentUser(r)

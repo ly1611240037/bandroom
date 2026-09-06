@@ -43,9 +43,9 @@
 
 ## 7. Notifications and scheduled processing
 
-- [ ]  7.1 Implement in-app notification creation, unread/read state, and notification list pages; verify customer and owner receive the appropriate booking events.
-- [ ]  7.2 Implement an email adapter with test-mail configuration and templates for verification, password reset, booking success, cancellation, owner alerts, and expiry reminders; verify emails render with booking details.
-- [ ]  7.3 Implement reliable scheduled processing for completion, monthly-card reminders three days before expiry, and notification retries/failures; verify a mail failure does not change booking state.
+- [x]  7.1 Implement in-app notification creation, unread/read state, and notification list pages; verify customer and owner receive the appropriate booking events.
+- [x]  7.2 Implement an email adapter with test-mail configuration and templates for verification, password reset, booking success, cancellation, owner alerts, and expiry reminders; verify emails render with booking details.
+- [x]  7.3 Implement reliable scheduled processing for completion, monthly-card reminders three days before expiry, and notification retries/failures; verify a mail failure does not change booking state.
 
 ## 8. Owner backend
 
