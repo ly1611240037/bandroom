@@ -6,9 +6,9 @@
 
 ## 2. Database and seed data
 
-- [ ]  2.1 Create versioned SQLite migrations for users, verification tokens, password resets, membership plans, membership cards, rooms, fixed equipment, public equipment, schedules, closures, bookings, booking equipment, notifications, issue reports, venue content, and audit logs; verify migrations apply to a fresh database.
-- [ ]  2.2 Implement data-access repositories and transaction boundaries, and verify basic create/read/update operations with integration tests.
-- [ ]  2.3 Add repeatable demo-data initialization with owner, customer, rooms, equipment, membership cards, and sample bookings; verify a fresh demo database contains all documented accounts and examples.
+- [x]  2.1 Create versioned SQLite migrations for users, verification tokens, password resets, membership plans, membership cards, rooms, fixed equipment, public equipment, schedules, closures, bookings, booking equipment, notifications, issue reports, venue content, and audit logs; verify migrations apply to a fresh database.
+- [x]  2.2 Implement data-access repositories and transaction boundaries, and verify basic create/read/update operations with integration tests.
+- [x]  2.3 Add repeatable demo-data initialization with owner, customer, rooms, equipment, membership cards, and sample bookings; verify a fresh demo database contains all documented accounts and examples.
 
 ## 3. Authentication and authorization
 
