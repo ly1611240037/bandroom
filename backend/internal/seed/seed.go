@@ -5,9 +5,15 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+
+	"github.com/ly1611240037/bandroom/backend/internal/auth"
 )
 
 func SeedDemo(ctx context.Context, database *sql.DB) error {
+	demoPasswordHash, err := auth.HashPassword("demo123456")
+	if err != nil {
+		return fmt.Errorf("hash demo password: %w", err)
+	}
 	tx, err := database.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -15,11 +21,11 @@ func SeedDemo(ctx context.Context, database *sql.DB) error {
 	defer tx.Rollback()
 
 	if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO users(role, name, email, phone, password_hash, email_verified_at)
-		VALUES ('owner', 'BandRoom 老板', 'owner@bandroom.test', '13800000000', 'demo-password-hash', CURRENT_TIMESTAMP)`); err != nil {
+		VALUES ('owner', 'BandRoom 老板', 'owner@bandroom.test', '13800000000', ?, CURRENT_TIMESTAMP)`, demoPasswordHash); err != nil {
 		return fmt.Errorf("seed owner: %w", err)
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO users(role, name, email, phone, password_hash, email_verified_at)
-		VALUES ('customer', '演示联系人', 'customer@bandroom.test', '13900000000', 'demo-password-hash', CURRENT_TIMESTAMP)`); err != nil {
+		VALUES ('customer', '演示联系人', 'customer@bandroom.test', '13900000000', ?, CURRENT_TIMESTAMP)`, demoPasswordHash); err != nil {
 		return fmt.Errorf("seed customer: %w", err)
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO membership_plans(plan_type, name, price_cents, included_uses)

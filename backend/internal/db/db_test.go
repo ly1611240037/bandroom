@@ -32,8 +32,8 @@ func TestMigrateCreatesSchemaAndIsRepeatable(t *testing.T) {
 	if err := database.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&applied); err != nil {
 		t.Fatal(err)
 	}
-	if applied != 1 {
-		t.Fatalf("expected one migration, got %d", applied)
+	if applied != 2 {
+		t.Fatalf("expected two migrations, got %d", applied)
 	}
 }
 
