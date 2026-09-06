@@ -52,6 +52,16 @@ type Closure struct {
 	EndsAt   string `json:"endsAt"`
 	Reason   string `json:"reason"`
 }
+type IssueReport struct {
+	ID          int64  `json:"id"`
+	UserID      int64  `json:"userId"`
+	RoomID      *int64 `json:"roomId,omitempty"`
+	EquipmentID *int64 `json:"equipmentId,omitempty"`
+	Description string `json:"description"`
+	Status      string `json:"status"`
+	CreatedAt   string `json:"createdAt"`
+	ResolvedAt  string `json:"resolvedAt,omitempty"`
+}
 type Service struct{ db *sql.DB }
 
 func NewService(db *sql.DB) *Service { return &Service{db: db} }
@@ -260,6 +270,88 @@ func (s *Service) CanBookRoom(ctx context.Context, id int64) error {
 		return ErrUnavailable
 	}
 	return nil
+}
+
+func (s *Service) CreateIssueReport(ctx context.Context, userID int64, roomID, equipmentID *int64, description string) (IssueReport, error) {
+	if userID <= 0 || strings.TrimSpace(description) == "" {
+		return IssueReport{}, errors.New("报修描述不能为空")
+	}
+	result, err := s.db.ExecContext(ctx, `INSERT INTO issue_reports(user_id, room_id, equipment_id, description) VALUES (?, ?, ?, ?)`, userID, roomID, equipmentID, strings.TrimSpace(description))
+	if err != nil {
+		return IssueReport{}, err
+	}
+	id, _ := result.LastInsertId()
+	return s.GetIssueReport(ctx, id)
+}
+func (s *Service) GetIssueReport(ctx context.Context, id int64) (IssueReport, error) {
+	var item IssueReport
+	var room, equipment sql.NullInt64
+	var resolved sql.NullString
+	err := s.db.QueryRowContext(ctx, `SELECT id, user_id, room_id, equipment_id, description, status, created_at, resolved_at FROM issue_reports WHERE id = ?`, id).Scan(&item.ID, &item.UserID, &room, &equipment, &item.Description, &item.Status, &item.CreatedAt, &resolved)
+	if room.Valid {
+		item.RoomID = &room.Int64
+	}
+	if equipment.Valid {
+		item.EquipmentID = &equipment.Int64
+	}
+	if resolved.Valid {
+		item.ResolvedAt = resolved.String
+	}
+	return item, err
+}
+func (s *Service) ListIssueReports(ctx context.Context, userID *int64) ([]IssueReport, error) {
+	query := `SELECT id FROM issue_reports`
+	args := []any{}
+	if userID != nil {
+		query += ` WHERE user_id = ?`
+		args = append(args, *userID)
+	}
+	query += ` ORDER BY created_at DESC, id DESC`
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	result := make([]IssueReport, 0)
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		item, err := s.GetIssueReport(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, item)
+	}
+	return result, rows.Err()
+}
+func (s *Service) UpdateIssueReport(ctx context.Context, id int64, status string, equipmentStatus string) error {
+	if status != "open" && status != "in_progress" && status != "resolved" {
+		return errors.New("报修状态不正确")
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if status == "resolved" {
+		_, err = tx.ExecContext(ctx, `UPDATE issue_reports SET status = ?, resolved_at = CURRENT_TIMESTAMP WHERE id = ?`, status, id)
+	} else {
+		_, err = tx.ExecContext(ctx, `UPDATE issue_reports SET status = ?, resolved_at = NULL WHERE id = ?`, status, id)
+	}
+	if err != nil {
+		return err
+	}
+	if equipmentStatus != "" {
+		if equipmentStatus != "available" && equipmentStatus != "maintenance" && equipmentStatus != "disabled" {
+			return errors.New("设备状态不正确")
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE public_equipment SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT equipment_id FROM issue_reports WHERE id = ?)`, equipmentStatus, id); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 func (s *Service) fillRoom(ctx context.Context, room *Room) error {
 	photos, err := s.db.QueryContext(ctx, `SELECT id, url, sort_order FROM room_photos WHERE room_id = ? ORDER BY sort_order, id`, room.ID)

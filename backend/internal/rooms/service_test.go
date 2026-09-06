@@ -18,6 +18,9 @@ func roomService(t *testing.T) *Service {
 	if err := db.Migrate(context.Background(), database); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := database.Exec(`INSERT INTO users(role, name, email, phone, password_hash) VALUES ('customer', '顾客', 'customer@example.com', '13800000000', 'hash')`); err != nil {
+		t.Fatal(err)
+	}
 	return NewService(database)
 }
 
@@ -65,5 +68,16 @@ func TestRoomEquipmentAndScheduleManagement(t *testing.T) {
 	}
 	if err := service.SetBusinessHour(ctx, BusinessHour{Weekday: 0, OpensAt: "09:00", ClosesAt: "22:00", Enabled: true}); err != nil {
 		t.Fatal(err)
+	}
+	issue, err := service.CreateIssueReport(ctx, 1, &room.ID, &item.ID, "麦克风没有声音")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.UpdateIssueReport(ctx, issue.ID, "in_progress", "maintenance"); err != nil {
+		t.Fatal(err)
+	}
+	updated, err := service.GetEquipment(ctx, item.ID)
+	if err != nil || updated.Status != "maintenance" {
+		t.Fatalf("issue should update equipment status: %+v, %v", updated, err)
 	}
 }

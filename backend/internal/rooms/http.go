@@ -33,6 +33,10 @@ func (h Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.Handle("PUT /api/owner/schedule/{weekday}", h.auth.RequireRole("owner", http.HandlerFunc(h.setSchedule)))
 	mux.Handle("GET /api/owner/closures", h.auth.RequireRole("owner", http.HandlerFunc(h.closures)))
 	mux.Handle("POST /api/owner/closures", h.auth.RequireRole("owner", http.HandlerFunc(h.addClosure)))
+	mux.Handle("POST /api/customer/issues", h.auth.RequireRole("customer", http.HandlerFunc(h.createIssue)))
+	mux.Handle("GET /api/customer/issues", h.auth.RequireRole("customer", http.HandlerFunc(h.listMyIssues)))
+	mux.Handle("GET /api/owner/issues", h.auth.RequireRole("owner", http.HandlerFunc(h.listIssues)))
+	mux.Handle("PATCH /api/owner/issues/{id}", h.auth.RequireRole("owner", http.HandlerFunc(h.updateIssue)))
 }
 func (h Handler) listRooms(w http.ResponseWriter, r *http.Request) {
 	rooms, err := h.service.ListRooms(r.Context())
@@ -254,6 +258,67 @@ func (h Handler) addClosure(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 201, map[string]int64{"id": id})
+}
+func (h Handler) createIssue(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		RoomID      *int64 `json:"roomId"`
+		EquipmentID *int64 `json:"equipmentId"`
+		Description string `json:"description"`
+	}
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		httpx.WriteError(w, http.StatusUnauthorized, "请先登录")
+		return
+	}
+	item, err := h.service.CreateIssueReport(r.Context(), user.ID, input.RoomID, input.EquipmentID, input.Description)
+	if err != nil {
+		httpx.WriteError(w, 400, err.Error())
+		return
+	}
+	writeJSON(w, 201, map[string]any{"issue": item})
+}
+func (h Handler) listMyIssues(w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		httpx.WriteError(w, 401, "请先登录")
+		return
+	}
+	issues, err := h.service.ListIssueReports(r.Context(), &user.ID)
+	if err != nil {
+		httpx.WriteError(w, 500, "读取报修记录失败")
+		return
+	}
+	writeJSON(w, 200, map[string]any{"issues": issues})
+}
+func (h Handler) listIssues(w http.ResponseWriter, r *http.Request) {
+	issues, err := h.service.ListIssueReports(r.Context(), nil)
+	if err != nil {
+		httpx.WriteError(w, 500, "读取报修记录失败")
+		return
+	}
+	writeJSON(w, 200, map[string]any{"issues": issues})
+}
+func (h Handler) updateIssue(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Status          string `json:"status"`
+		EquipmentStatus string `json:"equipmentStatus"`
+	}
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	id, err := parseID(r.PathValue("id"))
+	if err != nil {
+		httpx.WriteError(w, 400, "报修编号不正确")
+		return
+	}
+	if err := h.service.UpdateIssueReport(r.Context(), id, input.Status, input.EquipmentStatus); err != nil {
+		httpx.WriteError(w, 400, err.Error())
+		return
+	}
+	writeJSON(w, 200, map[string]string{"message": "报修状态已更新"})
 }
 func parseID(value string) (int64, error) {
 	var id int64

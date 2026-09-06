@@ -20,6 +20,8 @@ function App() {
   const [error, setError] = useState('')
   const [user, setUser] = useState(null)
   const [cards, setCards] = useState([])
+  const [rooms, setRooms] = useState([])
+  const [equipment, setEquipment] = useState([])
   const [loading, setLoading] = useState(false)
   const params = new URLSearchParams(window.location.search)
 
@@ -41,6 +43,12 @@ function App() {
     if (user?.role === 'customer') api('/api/customer/membership/cards').then((data) => setCards(data.cards || [])).catch(() => setCards([]))
     else setCards([])
   }, [user])
+
+  useEffect(() => {
+    Promise.all([api('/api/rooms'), api('/api/equipment')]).then(([roomData, equipmentData]) => {
+      setRooms(roomData.rooms || []); setEquipment(equipmentData.equipment || [])
+    }).catch(() => {})
+  }, [])
 
   function updateField(event) {
     setForm((old) => ({ ...old, [event.target.name]: event.target.value }))
@@ -83,6 +91,7 @@ function App() {
         <h1>让每一次排练，<span>准时开始。</span></h1>
         <p className="lead">多房间预约、会员卡与排练设备，一处管理你的乐队时光。</p>
         <div className="feature-list"><span>01　灵活预约</span><span>02　设备借用</span><span>03　会员专属</span></div>
+        <Catalog rooms={rooms} equipment={equipment} />
       </section>
       <section className="auth-card">
         <div className="card-top"><span className="record-dot" /><span>REHEARSAL ROOM ACCESS</span></div>
@@ -121,6 +130,10 @@ function LoggedIn({ user, cards, onLogout }) {
 function MembershipCards({ cards }) {
   if (!cards.length) return <div className="membership-empty">暂时没有会员卡，请联系老板线下开通。</div>
   return <div className="membership-list">{cards.map((card) => <div className="membership-card" key={card.id}><div><strong>{card.planName}</strong><span>{card.planType === 'monthly' ? '月卡' : '次数卡'}</span></div><b>{card.planType === 'monthly' ? `${card.startsAt.slice(0, 10)} — ${card.endsAt.slice(0, 10)}` : `剩余 ${card.remainingUses ?? 0} 次`}</b><small>{card.status === 'active' ? '当前可用' : card.status === 'scheduled' ? '待生效' : card.status === 'depleted' ? '已用完' : card.status}</small></div>)}</div>
+}
+
+function Catalog({ rooms, equipment }) {
+  return <div className="catalog"><div className="catalog-heading"><span>空间与设备</span><small>开放浏览 · 登录后预约</small></div><div className="catalog-grid">{rooms.slice(0, 3).map((room) => <div className="catalog-item" key={room.id}><strong>{room.name}</strong><span>{room.status === 'available' ? '可预约' : '暂不可用'} · {room.capacity ? `${room.capacity} 人` : '标准房'}</span><small>{room.fixedEquipment?.map((item) => item.name).join(' · ') || '基础排练设备'}</small></div>)}{equipment.slice(0, 3).map((item) => <div className="catalog-item equipment-item" key={`equipment-${item.id}`}><strong>{item.name}</strong><span>{item.status === 'available' ? `库存 ${item.quantity}` : '维护中'}</span><small>公共借用设备</small></div>)}</div></div>
 }
 
 export default App

@@ -29,8 +29,8 @@
 - [x]  5.1 Implement room CRUD, photos, fixed equipment, capacity display, and room status; verify maintenance and suspended rooms cannot be selected for new bookings.
 - [x]  5.2 Implement weekly schedules, special closed dates, partial-day closures, and configurable cleaning buffer with defaults of 08:00–23:00 and 30 minutes; verify affected slots are unavailable.
 - [x]  5.3 Implement public equipment CRUD, quantities, statuses, and availability calculation; verify unavailable equipment cannot be selected.
-- [ ]  5.4 Implement customer room and equipment browsing, including room photos, fixed equipment, and remaining public-equipment quantities; verify unauthenticated browsing works.
-- [ ]  5.5 Implement customer issue reports and owner review/status updates; verify a submitted report appears in the owner backend and can mark equipment under maintenance.
+- [x]  5.4 Implement customer room and equipment browsing, including room photos, fixed equipment, and remaining public-equipment quantities; verify unauthenticated browsing works.
+- [x]  5.5 Implement customer issue reports and owner review/status updates; verify a submitted report appears in the owner backend and can mark equipment under maintenance.
 
 ## 6. Booking engine
 
