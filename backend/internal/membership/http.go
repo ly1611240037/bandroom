@@ -30,9 +30,15 @@ func (h Handler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h Handler) listMyCards(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())
-	if !ok { httpx.WriteError(w, http.StatusUnauthorized, "请先登录"); return }
+	if !ok {
+		httpx.WriteError(w, http.StatusUnauthorized, "请先登录")
+		return
+	}
 	cards, err := h.service.ListCards(r.Context(), user.ID)
-	if err != nil { httpx.WriteError(w, http.StatusInternalServerError, "读取会员卡失败"); return }
+	if err != nil {
+		httpx.WriteError(w, http.StatusInternalServerError, "读取会员卡失败")
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"cards": cards})
 }
 

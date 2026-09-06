@@ -10,6 +10,7 @@ import (
 	"github.com/ly1611240037/bandroom/backend/internal/config"
 	"github.com/ly1611240037/bandroom/backend/internal/db"
 	"github.com/ly1611240037/bandroom/backend/internal/membership"
+	"github.com/ly1611240037/bandroom/backend/internal/rooms"
 )
 
 func main() {
@@ -30,6 +31,7 @@ func main() {
 	authHandler := auth.NewHandler(auth.NewService(database, cfg.AppURL, auth.LogMailer{Logf: log.Printf}))
 	authHandler.RegisterRoutes(mux)
 	membership.NewHandler(membership.NewService(database), authHandler).RegisterRoutes(mux)
+	rooms.NewHandler(rooms.NewService(database), authHandler).RegisterRoutes(mux)
 
 	server := &http.Server{Addr: cfg.HTTPAddr, Handler: cors(cfg.AppURL, mux)}
 	log.Printf("BandRoom backend listening on %s", cfg.HTTPAddr)
