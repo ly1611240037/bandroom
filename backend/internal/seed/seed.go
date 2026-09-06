@@ -60,7 +60,7 @@ func SeedDemo(ctx context.Context, database *sql.DB) error {
 		return fmt.Errorf("seed public equipment: %w", err)
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO venue_content(content_key, content_value)
-		VALUES ('name', 'BandRoom 音乐排练空间'), ('description', '面向乐队的多房间会员制排练空间'), ('phone', '400-000-0000')`); err != nil {
+		VALUES ('name', 'BandRoom 音乐排练空间'), ('description', '面向乐队的多房间会员制排练空间'), ('phone', '400-000-0000'), ('announcement', '欢迎提前预约，设备可在预约时一并借用'), ('membershipInstructions', '月卡或次数卡，老板线下开通；预约不单独收取租金'), ('openingRules', '每日 08:00 — 23:00，预约按半小时计算并预留 30 分钟清场')`); err != nil {
 		return fmt.Errorf("seed venue content: %w", err)
 	}
 

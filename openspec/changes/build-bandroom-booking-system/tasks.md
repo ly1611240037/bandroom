@@ -56,9 +56,9 @@
 
 ## 9. Venue website and content
 
-- [ ]  9.1 Build the public homepage with BandRoom 音乐排练空间 branding, venue information, membership instructions, room highlights, opening rules, and booking entry point; verify it works without login.
-- [ ]  9.2 Build responsive customer layouts for desktop and mobile browsers with the agreed dark music-themed visual style; verify core booking actions are usable at both viewport sizes.
-- [ ]  9.3 Build owner editing for venue information, contact details, announcements, membership instructions, opening rules, and room photos; verify saved content appears on the public site.
+- [x]  9.1 Build the public homepage with BandRoom 音乐排练空间 branding, venue information, membership instructions, room highlights, opening rules, and booking entry point; verify it works without login.
+- [x]  9.2 Build responsive customer layouts for desktop and mobile browsers with the agreed dark music-themed visual style; verify core booking actions are usable at both viewport sizes.
+- [x]  9.3 Build owner editing for venue information, contact details, announcements, membership instructions, opening rules, and room photos; verify saved content appears on the public site.
 
 ## 10. Integration, packaging, and project materials
 
