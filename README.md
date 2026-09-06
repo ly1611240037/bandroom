@@ -60,7 +60,7 @@ v1.0 仅面向单个门店和一个老板管理员，不包含在线支付、独
 powershell -ExecutionPolicy Bypass -File .\scripts\start-demo.ps1
 ```
 
-脚本会自动检查前端依赖、构建 React、初始化演示数据，并启动统一的 Go 服务。打开 <http://localhost:8080> 即可。按 `Ctrl+C` 停止服务。
+首次使用请先在 `frontend` 目录执行一次 `npm install`。之后脚本会构建 React、初始化演示数据，并启动统一的 Go 服务。打开 <http://localhost:8080> 即可。按 `Ctrl+C` 停止服务。
 
 ### 开发模式（前后端分开）
 
