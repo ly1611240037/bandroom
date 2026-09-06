@@ -52,6 +52,16 @@ v1.0 仅面向单个门店和一个老板管理员，不包含在线支付、独
 
 环境要求：Go 1.22+、Node.js 18+ 和 npm。以下命令以 PowerShell 为例。
 
+### 一条命令启动演示版
+
+在项目根目录执行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-demo.ps1
+```
+
+脚本会自动检查前端依赖、构建 React、初始化演示数据，并启动统一的 Go 服务。打开 <http://localhost:8080> 即可。按 `Ctrl+C` 停止服务。
+
 ### 开发模式（前后端分开）
 
 先启动后端：
