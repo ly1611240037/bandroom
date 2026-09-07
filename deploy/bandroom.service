@@ -1,0 +1,22 @@
+[Unit]
+Description=BandRoom booking application
+After=network.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+WorkingDirectory=/var/lib/bandroom
+StateDirectory=bandroom
+StateDirectoryMode=0700
+EnvironmentFile=/etc/bandroom.env
+ExecStart=/opt/bandroom/bin/server
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

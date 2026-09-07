@@ -41,3 +41,13 @@ Thumbs.db
 # Test and coverage output
 coverage/
 tmp/
+
+# Deployment secrets and database backups
+*.env
+*.env.*
+!*.env.example
+*.db.bak*
+*.sqlite.bak*
+*.sqlite3.bak*
+*.p12
+*.pfx
