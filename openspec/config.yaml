@@ -1,32 +1,16 @@
 schema: spec-driven
-
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
-
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
-
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+context: |
+  BandRoom 为单门店、单老板的 React + Go + SQLite 排练房会员预约演示项目。
+  开发规则入口 AGENTS.md，代码工作应用 .agents/skills/karpathy-guidelines/SKILL.md。
+  先理解需求、保持简单、精确修改、验证目标；保留 HTTP/service/db 分层和界面风格。
+  门店 UTC+8，预约半小时对齐、0.5–3 小时，加 30 分钟清场。
+  创建预约事务校验会员、未来预约、房间与设备库存；保留老板例外调整权限。
+  历史规格在 openspec/changes/archive/，不扩展支付、多门店或员工权限。
+rules:
+  proposal:
+    - 说明具体问题、范围与非目标。
+  design:
+    - 解释最小实现、兼容性和验证方式。
+  tasks:
+    - 每项任务有可验证结果，缺陷补回归用例。
+    - 完成前运行 scripts/check.ps1，记录实际结果与限制。

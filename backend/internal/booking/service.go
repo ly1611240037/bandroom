@@ -44,6 +44,7 @@ type Service struct {
 	db       *sql.DB
 	location *time.Location
 	notifier *notification.Service
+	now      func() time.Time
 }
 
 func NewService(database *sql.DB, notifiers ...*notification.Service) *Service {
@@ -51,13 +52,20 @@ func NewService(database *sql.DB, notifiers ...*notification.Service) *Service {
 	if len(notifiers) > 0 {
 		notifier = notifiers[0]
 	}
-	return &Service{db: database, location: time.FixedZone("China Standard Time", 8*60*60), notifier: notifier}
+	return &Service{db: database, location: time.FixedZone("China Standard Time", 8*60*60), notifier: notifier, now: time.Now}
 }
 
 func (s *Service) Availability(ctx context.Context, roomID int64, date string) ([]Slot, error) {
 	day, err := time.ParseInLocation("2006-01-02", date, s.location)
 	if err != nil {
 		return nil, errors.New("日期格式应为 YYYY-MM-DD")
+	}
+	var status string
+	if err := s.db.QueryRowContext(ctx, `SELECT status FROM rooms WHERE id = ?`, roomID).Scan(&status); err != nil {
+		return nil, err
+	}
+	if status != "available" {
+		return []Slot{}, nil
 	}
 	var opens, closes string
 	var enabled int
@@ -75,9 +83,33 @@ func (s *Service) Availability(ctx context.Context, roomID int64, date string) (
 	if err != nil {
 		return nil, err
 	}
+	rows, err := s.db.QueryContext(ctx, `SELECT starts_at, occupied_until FROM bookings WHERE room_id = ? AND status = 'confirmed' AND datetime(starts_at) < datetime(?) AND datetime(occupied_until) > datetime(?)`, roomID, close.Format(time.RFC3339), open.Format(time.RFC3339))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var a, b string
+		if err := rows.Scan(&a, &b); err != nil {
+			return nil, err
+		}
+		start, err := time.Parse(time.RFC3339, a)
+		if err != nil {
+			return nil, err
+		}
+		end, err := time.Parse(time.RFC3339, b)
+		if err != nil {
+			return nil, err
+		}
+		closures = append(closures, [2]time.Time{start, end})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	now := s.now()
 	result := make([]Slot, 0)
 	for start := open; start.Before(close); start = start.Add(30 * time.Minute) {
-		if start.Before(time.Now().In(s.location)) {
+		if !start.After(now) {
 			continue
 		}
 		for duration := timeutil.MinBookingMin; duration <= timeutil.MaxBookingMin; duration += timeutil.SlotMinutes {
@@ -86,13 +118,7 @@ func (s *Service) Availability(ctx context.Context, roomID int64, date string) (
 			if occupied.After(close) || s.overlapsClosure(start, occupied, closures) {
 				continue
 			}
-			free, err := s.roomFree(ctx, roomID, start, occupied)
-			if err != nil {
-				return nil, err
-			}
-			if free {
-				result = append(result, Slot{StartsAt: start.Format(time.RFC3339), EndsAt: end.Format(time.RFC3339), DurationMinutes: duration})
-			}
+			result = append(result, Slot{StartsAt: start.Format(time.RFC3339), EndsAt: end.Format(time.RFC3339), DurationMinutes: duration})
 		}
 	}
 	return result, nil
@@ -119,7 +145,7 @@ func (s *Service) Create(ctx context.Context, userID int64, roomID int64, bandNa
 	if role != "customer" || !verified.Valid {
 		return Booking{}, errors.New("请先完成顾客邮箱验证")
 	}
-	now := time.Now().UTC().Format(time.RFC3339)
+	now := s.now().UTC().Format(time.RFC3339)
 	var future int
 	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM bookings WHERE user_id = ? AND status = 'confirmed' AND datetime(starts_at) > datetime(?)`, userID, now).Scan(&future); err != nil {
 		return Booking{}, err
@@ -197,7 +223,7 @@ func (s *Service) ListAll(ctx context.Context) ([]Booking, error) {
 }
 
 func (s *Service) Search(ctx context.Context, date, status, keyword string) ([]Booking, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id FROM bookings WHERE (? = '' OR date(datetime(starts_at)) = ?) AND (? = '' OR status = ?) AND (? = '' OR band_name LIKE ? OR phone LIKE ?) ORDER BY starts_at DESC`, date, date, status, status, keyword, "%"+keyword+"%", "%"+keyword+"%")
+	rows, err := s.db.QueryContext(ctx, `SELECT id FROM bookings WHERE (? = '' OR date(starts_at, '+8 hours') = ?) AND (? = '' OR status = ?) AND (? = '' OR band_name LIKE ? OR phone LIKE ?) ORDER BY datetime(starts_at) DESC`, date, date, status, status, keyword, "%"+keyword+"%", "%"+keyword+"%")
 	if err != nil {
 		return nil, err
 	}
@@ -326,30 +352,23 @@ func (s *Service) validateInterval(startsAt, endsAt string) (time.Time, time.Tim
 	if err != nil {
 		return time.Time{}, time.Time{}, errors.New("结束时间格式不正确")
 	}
+	start, end = start.In(s.location), end.In(s.location)
 	if !timeutil.IsHalfHour(start) || !timeutil.IsHalfHour(end) || !timeutil.IsValidDuration(int(end.Sub(start).Minutes())) {
 		return time.Time{}, time.Time{}, errors.New("预约必须按半小时选择，时长为 0.5 至 3 小时")
 	}
 	if !end.After(start) {
 		return time.Time{}, time.Time{}, errors.New("结束时间必须晚于开始时间")
 	}
-	if !start.After(time.Now()) {
+	if !start.After(s.now()) {
 		return time.Time{}, time.Time{}, errors.New("不能预约已经开始的时间")
 	}
 	return start, end, nil
 }
-func (s *Service) roomFree(ctx context.Context, roomID int64, start, occupied time.Time) (bool, error) {
-	return s.roomFreeTx(ctx, nil, roomID, start, occupied)
-}
 func (s *Service) roomFreeTx(ctx context.Context, tx *sql.Tx, roomID int64, start, occupied time.Time) (bool, error) {
 	query := `SELECT COUNT(*) FROM bookings WHERE room_id = ? AND status = 'confirmed' AND datetime(starts_at) < datetime(?) AND datetime(occupied_until) > datetime(?)`
 	var count int
-	var err error
 	args := []any{roomID, occupied.Format(time.RFC3339), start.Format(time.RFC3339)}
-	if tx != nil {
-		err = tx.QueryRowContext(ctx, query, args...).Scan(&count)
-	} else {
-		err = s.db.QueryRowContext(ctx, query, args...).Scan(&count)
-	}
+	err := tx.QueryRowContext(ctx, query, args...).Scan(&count)
 	return count == 0, err
 }
 func (s *Service) checkEquipmentTx(ctx context.Context, tx *sql.Tx, equipment []EquipmentRequest, start, occupied time.Time) error {

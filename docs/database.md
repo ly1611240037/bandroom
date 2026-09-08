@@ -13,7 +13,7 @@
 | `rooms` / `room_photos` | 排练房资料、状态和照片 |
 | `fixed_equipment` | 房间内固定设备 |
 | `public_equipment` | 可额外借用的公共设备和库存 |
-| `weekly_schedules` / `closures` | 营业时间和临时闭店 |
+| `business_hours` / `closures` | 营业时间和临时闭店 |
 | `bookings` / `booking_equipment` | 预约主记录、清场占用区间和设备数量 |
 | `notifications` | 站内通知及邮件发送状态 |
 | `issue_reports` | 顾客报修和老板处理状态 |
@@ -21,3 +21,5 @@
 | `audit_logs` | 老板操作的对象、动作和前后数据 |
 
 预约的 `occupied_until` 比实际排练结束时间晚 30 分钟，房间和公共设备冲突均使用这个占用区间判断。数据库迁移可重复执行，演示数据由 `go run ./cmd/seed` 幂等初始化。
+
+每条 SQLite 连接通过 DSN 启用外键与 5 秒忙等待，事务采用 immediate，在校验预约前取得写锁。营业时间与预约日期筛选统一采用 UTC+8。

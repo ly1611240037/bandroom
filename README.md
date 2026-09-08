@@ -36,10 +36,12 @@ BandRoom 面向单门店、多排练房场景，支持顾客使用月卡或次�
 OpenSpec 规划文件位于：
 
 ```text
-openspec/changes/build-bandroom-booking-system/
+openspec/changes/archive/2026-09-06-build-bandroom-booking-system/
 ```
 
-其中包括项目提案、功能规格、技术设计和开发任务清单。
+其中包括项目提案、功能规格、技术设计和开发任务清单。后续历史变更见 `openspec/changes/archive/`，当前变更见 `openspec/changes/`。
+
+开发规则入口为 [AGENTS.md](AGENTS.md)，其中接入了固定版本的 [Karpathy Guidelines](.agents/skills/karpathy-guidelines/SKILL.md)，来源版本见同目录 `SOURCE.md`。
 
 配套材料位于 `docs/`：
 
@@ -124,6 +126,16 @@ Copy-Item .\data\bandroom.db.bak .\data\bandroom.db
 ```
 
 演示场景建议依次展示：游客浏览房间 → 顾客登录查看会员卡 → 选择日期和时段预约 → 借用公共设备 → 顾客取消预约 → 老板查看预约、统计和审计日志。
+
+## 开发验证
+
+在根目录执行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\check.ps1
+```
+
+依次检查 Go 格式、静态分析、无缓存测试、前端测试和生产构建；任一步失败即停止。
 
 ## 部署说明
 

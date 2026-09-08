@@ -1,17 +1,23 @@
 # BandRoom 测试报告
 
+本轮问题、验证结果与边界见 [optimization-report.md](optimization-report.md)。
+
 ## 执行命令
 
 ```powershell
 cd backend
-go test ./...
+go vet ./...
+go test -count=1 ./...
 
 cd ../frontend
+npm test
 npm run build
 
 cd ..
-openspec validate "build-bandroom-booking-system" --type change --strict --no-interactive
+openspec validate --specs --strict --no-interactive
 ```
+
+也可在根目录执行 `powershell -ExecutionPolicy Bypass -File ./scripts/check.ps1`。
 
 ## 覆盖内容
 
