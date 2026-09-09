@@ -8,7 +8,7 @@ function EquipmentIcon({ name }) {
   return <Icon size={20} />;
 }
 
-export default function RoomScene({ room, onBook, compact = false }) {
+export default function RoomScene({ room, onBook, compact = false, accent }) {
   const equipment = room.fixedEquipment || [];
   const details = <>
     {compact && <p className="card-copy">{room.description || "房间介绍待补充。"}</p>}
@@ -16,7 +16,7 @@ export default function RoomScene({ room, onBook, compact = false }) {
     <p className="form-hint">设备分区示意，非实景或精确比例。固定设备随房使用；公共设备需在预约时另选。</p>
     <ul className="room-equipment">{equipment.map((item, index) => <li key={item.id}><span><b>{index + 1}. {item.name} · {equipmentQuantity(item)}</b><small>{item.description}</small></span><Status>{item.status}</Status></li>)}</ul>
   </>;
-  return <article className={`room-scene ${compact ? "room-preview" : ""}`}>
+  return <article className={`room-scene ${compact ? "room-preview" : ""}`} style={accent ? { "--room-accent": accent } : undefined}>
     {compact && <div className="room-preview-banner" aria-hidden="true"><DoorOpen size={38} /><span>REHEARSAL ROOM</span></div>}
     <div className="room-scene-heading"><div><h3>{room.name}</h3><span><UsersRound size={14} /> {room.capacity ? `${room.capacity} 人以内` : "容量请咨询门店"}</span></div><Status>{room.status}</Status></div>
     <p className="card-copy room-intro">{(compact ? room.description?.split("。")[0] : room.description) || "房间介绍待补充。"}</p>

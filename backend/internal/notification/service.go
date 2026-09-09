@@ -87,6 +87,16 @@ func (s *Service) MarkRead(ctx context.Context, userID, notificationID int64) er
 	}
 	return nil
 }
+func (s *Service) MarkAllRead(ctx context.Context, userID, throughID int64) (int64, error) {
+	if throughID <= 0 {
+		return 0, errors.New("通知范围不正确")
+	}
+	result, err := s.db.ExecContext(ctx, `UPDATE notifications SET read_at = ? WHERE user_id = ? AND id <= ? AND read_at IS NULL`, time.Now().UTC().Format(time.RFC3339), userID, throughID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
 func (s *Service) ProcessEmailQueue(ctx context.Context) error {
 	rows, err := s.db.QueryContext(ctx, `SELECT n.id, u.email, u.name, n.notification_type, n.title, n.body FROM notifications n JOIN users u ON u.id = n.user_id WHERE n.email_status = 'pending' ORDER BY n.id LIMIT 50`)
 	if err != nil {

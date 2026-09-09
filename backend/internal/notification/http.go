@@ -21,6 +21,27 @@ func (h Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.Handle("GET /api/notifications", h.auth.RequireLogin(http.HandlerFunc(h.list)))
 	mux.Handle("GET /api/notifications/unread-count", h.auth.RequireLogin(http.HandlerFunc(h.unread)))
 	mux.Handle("PATCH /api/notifications/{id}/read", h.auth.RequireLogin(http.HandlerFunc(h.markRead)))
+	mux.Handle("PATCH /api/notifications/read-all", h.auth.RequireLogin(http.HandlerFunc(h.markAllRead)))
+}
+func (h Handler) markAllRead(w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		httpx.WriteError(w, 401, "请先登录")
+		return
+	}
+	var input struct {
+		ThroughID int64 `json:"throughId"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil || input.ThroughID <= 0 {
+		httpx.WriteError(w, 400, "通知范围不正确")
+		return
+	}
+	count, err := h.service.MarkAllRead(r.Context(), user.ID, input.ThroughID)
+	if err != nil {
+		httpx.WriteError(w, 500, "标记通知失败")
+		return
+	}
+	writeJSON(w, 200, map[string]int64{"updated": count})
 }
 func (h Handler) list(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())

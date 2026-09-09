@@ -34,3 +34,25 @@ test("venue date follows UTC+8 at midnight regardless of browser timezone", () =
   assert.equal(venueDate(new Date("2026-09-08T15:59:59Z")), "2026-09-08");
   assert.equal(venueDate(new Date("2026-09-08T16:00:00Z")), "2026-09-09");
 });
+
+test("JSON API distinguishes valid data, empty responses and malformed success", async (t) => {
+  const fetch = t.mock.method(globalThis, "fetch");
+  for (const value of ["<html>fallback</html>", "null", "[]", "\"ok\"", ""]) {
+    fetch.mock.mockImplementation(async () => new Response(value));
+    await assert.rejects(api("/api/test"), { message: "服务器返回了无效数据，请刷新重试", status: 200 });
+  }
+  fetch.mock.mockImplementation(async () => new Response('{"rooms":[]}'));
+  assert.deepEqual(await api("/api/test"), { rooms: [] });
+  fetch.mock.mockImplementation(async () => new Response(null, { status: 204 }));
+  assert.deepEqual(await api("/api/test"), {});
+});
+
+test("JSON API preserves HTTP status, server errors and body cancellation", async (t) => {
+  const fetch = t.mock.method(globalThis, "fetch", async () => new Response('{"error":"请先登录"}', { status: 401 }));
+  await assert.rejects(api("/api/test"), { message: "请先登录", status: 401 });
+  fetch.mock.mockImplementation(async () => new Response("Bad Gateway", { status: 502 }));
+  await assert.rejects(api("/api/test"), { status: 502 });
+  const cancelled = new DOMException("cancelled", "AbortError");
+  fetch.mock.mockImplementation(async () => ({ status: 200, ok: true, json: async () => { throw cancelled; } }));
+  await assert.rejects(api("/api/test"), (error) => error === cancelled);
+});

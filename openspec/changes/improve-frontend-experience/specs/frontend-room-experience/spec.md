@@ -4,6 +4,31 @@
 
 ## ADDED Requirements
 
+### Requirement: Find a suitable rehearsal room
+系统 SHALL 在首页提供按人数及房间、固定设备关键词组合筛选，展示匹配数量、清除条件及无结果提示，完整显示公共设备。
+
+#### Scenario: Filter by capacity and equipment
+- **WHEN** 用户输入人数与设备关键词
+- **THEN** 仅显示容量足够且名称或可用固定设备匹配的房间，维护设备不作为设备匹配；清除条件恢复全部房间
+
+### Requirement: Reliable JSON responses
+系统 SHALL 将无效的 JSON API 成功响应展示为异常而非空数据，保留 HTTP 错误状态及取消信号。
+
+#### Scenario: Server returns an HTML fallback
+- **WHEN** JSON API 返回 HTML 或无效 JSON
+- **THEN** 请求明确失败，页面不得将其解释为没有记录或操作成功
+
+### Requirement: Refresh and batch read notifications
+系统 SHALL 支持通知刷新、读取失败重试、北京时间展示和当前已加载通知批量已读。
+
+#### Scenario: Batch read with concurrent arrivals
+- **WHEN** 用户批量标记已加载通知且之后出现新消息
+- **THEN** 服务端只更新当前用户且 ID 不超过已加载最大 ID 的未读通知，其他用户、新消息及已有阅读时间不受影响，重复操作可安全执行
+
+#### Scenario: Refresh fails
+- **WHEN** 刷新通知失败
+- **THEN** 保留已有记录，显示错误与重试入口；加载期间禁止读取操作，过期响应不得覆盖新状态
+
 ### Requirement: Compact slot selection
 系统 SHALL 按时长和开始时间所属的上午、下午、晚上分组展示可用时段，保留所有合法候选。
 
