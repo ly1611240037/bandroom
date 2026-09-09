@@ -69,6 +69,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\start-demo.ps1
 
 首次使用请先在 `frontend` 目录执行一次 `npm install`。之后脚本会构建 React、初始化演示数据，并启动统一的 Go 服务。打开 <http://localhost:8080> 即可。按 `Ctrl+C` 停止服务。
 
+演示资料包含三种排练场景：A 房完整乐队合奏、B 房大编制走台、C 房人声与小编制创作，以及随房固定设备。场馆首页展示设备分区示意，点击“预约这间房”可直接带入选房。示意不代表实景或精确比例；公共设备在预约时另选。
+
 ### 开发模式（前后端分开）
 
 先启动后端：

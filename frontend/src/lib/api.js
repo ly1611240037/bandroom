@@ -7,6 +7,6 @@ export async function api(path, options = {}) {
     headers,
   });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || "请求失败，请稍后重试");
+  if (!response.ok) { const error = new Error(body.error || "请求失败，请稍后重试"); error.status = response.status; throw error; }
   return body;
 }

@@ -7,15 +7,18 @@ import { Home, Booking, History, Membership as CustomerMembership, Notifications
 import { Overview, Bookings, Rooms, Equipment, Membership as OwnerMembership, SettingsPage } from "./pages/owner";
 import "./styles.css";
 
-function GuestAuth({ onLogin }) { const { pathname } = useLocation(); return <AuthPage mode={pathname === "/reset-password" ? "reset" : authMode(pathname)} onLogin={onLogin} />; }
+function GuestAuth({ onLogin }) { const { pathname, search } = useLocation(); if (!["/login", "/register", "/forgot-password", "/reset-password"].includes(pathname)) return <Navigate to="/login" state={{ from: pathname + search }} replace />; return <AuthPage mode={pathname === "/reset-password" ? "reset" : authMode(pathname)} onLogin={onLogin} />; }
 
 function authMode(path) { return path === "/register" ? "register" : path === "/forgot-password" ? "forgot" : "login"; }
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  useEffect(() => { api("/api/auth/me").then((data) => setUser(data.user)).catch(() => {}).finally(() => setLoading(false)); }, []);
+  const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => { let active = true; setLoading(true); setError(""); api("/api/auth/me").then((data) => { if (active) setUser(data.user); }).catch((error) => { if (active && error.status !== 401) setError(error.message); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, [attempt]);
   if (loading) return <div className="loading-screen"><span className="brand-mark">B</span><span>正在打开 BandRoom…</span></div>;
+  if (error) return <div className="loading-screen"><p role="alert">无法连接服务：{error}</p><button className="button primary" onClick={() => setAttempt((value) => value + 1)}>重新连接</button></div>;
   return <BrowserRouter><Routes>
     <Route path="/verify-email" element={<VerifyEmail />} />
     <Route path="/reset-password" element={<GuestAuth onLogin={setUser} />} />

@@ -22,3 +22,4 @@
 - 根目录运行 `powershell -ExecutionPolicy Bypass -File ./scripts/check.ps1`。
 - 有规格变更另运行 `openspec validate <change> --type change --strict --no-interactive`。
 - 页面交互修改需验证受影响流程；交付说明实际结果与验证限制。
+- 每完成一个可验证阶段，检查通过后整理提交并推送当前分支的跟踪远端；保留阶段间未完成或用户另有安排的改动。

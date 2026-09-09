@@ -39,6 +39,7 @@ func TestSeedDemoIsRepeatable(t *testing.T) {
 		{"membership_plans", 2},
 		{"rooms", 3},
 		{"public_equipment", 3},
+		{"fixed_equipment", 13},
 	}
 	for _, check := range checks {
 		var got int
@@ -48,5 +49,15 @@ func TestSeedDemoIsRepeatable(t *testing.T) {
 		if got != check.want {
 			t.Fatalf("%s: got %d rows, want %d", check.table, got, check.want)
 		}
+	}
+	if _, err := database.Exec(`UPDATE rooms SET description = '老板自定义资料' WHERE name = 'A 房'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := SeedDemo(context.Background(), database); err != nil {
+		t.Fatal(err)
+	}
+	var description string
+	if err := database.QueryRow(`SELECT description FROM rooms WHERE name = 'A 房'`).Scan(&description); err != nil || description != "老板自定义资料" {
+		t.Fatalf("seed must preserve custom room description: %q, %v", description, err)
 	}
 }
