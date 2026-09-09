@@ -39,3 +39,7 @@
 #### Scenario: Expand spatial layout
 - **WHEN** 用户展开房间布局详情
 - **THEN** 看到含地板、墙面与立体设备的等距示意，设备编号与清单对应，手机宽度下不横向溢出
+
+#### Scenario: Drum kit inventory and legacy demo records
+- **WHEN** 展示演示房间的鼓组，或迁移旧版重复初始化的设备数据
+- **THEN** 鼓组按套计数并说明底鼓、军鼓、通鼓及镲片；只合并 B 房相同旧默认描述、数量一且可用的重复记录，保留定制及不同数量状态的设备

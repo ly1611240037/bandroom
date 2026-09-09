@@ -1,32 +1,37 @@
 import { useId } from "react";
+import { isDrumKit, equipmentQuantity } from "../lib/equipment.js";
 
 // Isometric projection: floor coordinates stay separate from equipment height.
 function project(x, y, z = 0) { return [240 + (x - y) * .88, 145 + (x + y) * .43 - z]; }
 function points(vertices) { return vertices.map(([x, y, z]) => project(x, y, z).join(",")).join(" "); }
 
+function DrumKitModel({ x, y }) {
+  return <g className="drum-kit-model" transform={`translate(${x}, ${y})`}>
+    <title>一套架子鼓：底鼓、军鼓、两只悬挂通鼓、落地通鼓及镲片；部件不单独计为一套</title>
+    {[[-26, -18, "踩镲"], [26, -24, "吊镲"], [34, 2, "叮叮镲"]].map(([cx, cy, name]) => <g key={name}><title>{name}</title><path d={`M ${cx} ${cy} v 32 m -6 4 l 6 -4 l 6 4`} fill="none" stroke="#94a3b8" strokeWidth="1.5" /><ellipse cx={cx} cy={cy} rx="12" ry="4" fill="#e3b66c" stroke="#ffe0a0" /></g>)}
+    {[[-10, -11, 8, "悬挂通鼓"], [8, -13, 9, "悬挂通鼓"], [-22, 8, 9, "军鼓"], [22, 13, 11, "落地通鼓"]].map(([cx, cy, r, name], index) => <g key={index}><title>{name}</title><path d={`M ${cx-r} ${cy} v 11 a ${r} 5 0 0 0 ${r*2} 0 v -11`} fill="#9d5942" stroke="#d6a58a" /><ellipse cx={cx} cy={cy} rx={r} ry="5" fill="#e8ddca" stroke="#d6a58a" /></g>)}
+    <g><title>底鼓</title><ellipse cx="2" cy="22" rx="15" ry="17" fill="#99553e" stroke="#d6a58a" strokeWidth="3" /><ellipse cx="0" cy="22" rx="12" ry="15" fill="#dcd8cf" /><circle cx="5" cy="27" r="3" fill="#263345" /><path d="M -10 35 l -5 6 M 11 35 l 5 6" stroke="#94a3b8" strokeWidth="2" /></g>
+  </g>;
+}
+
 function EquipmentModel({ item, index, x, y, size }) {
-  const drum = item.name.includes("鼓");
+  const drum = isDrumKit(item.name);
   const piano = item.name.includes("钢琴");
   const height = drum ? 23 : piano ? 20 : 36;
   const width = piano ? size * 1.25 : size;
   const depth = piano ? size * .55 : size;
   const [cx, cy] = project(x + width / 2, y + depth / 2, height);
   return <g className={`iso-device ${item.status !== "available" ? "unavailable" : ""}`}>
-    <title>{index + 1}. {item.name} × {item.quantity}，{item.status === "available" ? "随房可用" : "暂不可用"}</title>
+    <title>{index + 1}. {item.name} · {equipmentQuantity(item)}，{item.status === "available" ? "随房可用" : "暂不可用"}</title>
     <polygon points={points([[x + 6, y + 6, 0], [x + width + 9, y + 6, 0], [x + width + 9, y + depth + 9, 0], [x + 6, y + depth + 9, 0]])} fill="#0005" />
-    {drum ? <>
-      <path d={`M ${cx - 18} ${cy} v 22 a 18 9 0 0 0 36 0 v -22`} fill="#95533d" stroke="#e3a87e" />
-      <ellipse cx={cx} cy={cy} rx="18" ry="9" fill="#e9d8bb" stroke="#ac815d" strokeWidth="3" />
-      <path d={`M ${cx + 25} ${cy - 10} v 34 m -8 4 l 8 -4 l 8 4`} stroke="#94a3b8" fill="none" strokeWidth="2" />
-      <ellipse cx={cx + 25} cy={cy - 10} rx="14" ry="5" fill="#e3b66c" />
-    </> : <>
+    {drum ? <DrumKitModel x={cx} y={cy} /> : <>
       <polygon points={points([[x, y + depth, 0], [x + width, y + depth, 0], [x + width, y + depth, height], [x, y + depth, height]])} fill="#293953" stroke="#7390ab" />
       <polygon points={points([[x + width, y, 0], [x + width, y + depth, 0], [x + width, y + depth, height], [x + width, y, height]])} fill="#142033" stroke="#7390ab" />
       <polygon points={points([[x, y, height], [x + width, y, height], [x + width, y + depth, height], [x, y + depth, height]])} fill={piano ? "#e4e8eb" : "#526980"} stroke="#9fb3c4" />
       {piano ? Array.from({ length: 8 }, (_, key) => <polyline key={key} points={points([[x + key * width / 8, y, height + 1], [x + key * width / 8, y + depth, height + 1]])} stroke="#293953" />) : <ellipse cx={project(x + width / 2, y + depth, height / 2)[0]} cy={project(x + width / 2, y + depth, height / 2)[1]} rx="8" ry="11" fill="#0a1220" stroke="#697b91" />}
     </>}
-    <circle cx={cx} cy={cy - 23} r="11" fill={item.status === "available" ? "#ffb466" : "#64748b"} stroke="#101b2e" strokeWidth="2" />
-    <text x={cx} y={cy - 19} textAnchor="middle" fontSize="11" fontWeight="700" fill="#111827">{index + 1}</text>
+    <circle cx={cx} cy={cy - (drum ? 43 : 23)} r="11" fill={item.status === "available" ? "#ffb466" : "#64748b"} stroke="#101b2e" strokeWidth="2" />
+    <text x={cx} y={cy - (drum ? 39 : 19)} textAnchor="middle" fontSize="11" fontWeight="700" fill="#111827">{index + 1}</text>
   </g>;
 }
 
@@ -50,6 +55,6 @@ export default function RoomLayout({ room }) {
       {equipment.map((item, index) => <EquipmentModel key={item.id} item={item} index={index} x={20 + index % columns * step} y={20 + Math.floor(index / columns) * step} size={Math.min(35, step * .55)} />)}
       <text x="240" y="365" textAnchor="middle" fill="#aebed0" fontSize="12">开放视角 · 前侧入口</text>
     </svg>
-    <figcaption>立体布局示意 · 编号对应设备清单</figcaption>
+    <figcaption>每个编号代表一项配置，数量见清单；鼓组部件合计为一套。模型为示意，具体配置以清单为准。</figcaption>
   </figure>;
 }
